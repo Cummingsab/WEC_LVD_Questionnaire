@@ -179,7 +179,7 @@ function opt(key, val, label, extra) {
 
 function sopt(key, val) {
   var sel = S[key] === val ? ' sel' : '';
-  return '<div class="sopt'+sel+'" ontouchend="ev(event,\''+key+'\','+val+')" onclick="ev(event,\''+key+'\','+val+'\')">'+val+'</div>';
+  return '<div class="sopt'+sel+'" ontouchend="ev(event,\''+key+'\','+val+')" onclick="ev(event,\''+key+'\','+val+')">'+val+'</div>';
 }
 
 function copt(val, label) {
@@ -469,42 +469,94 @@ function buildReport() {
   var pfH=pf2.map(function(t){return '<li class="fi"><span class="fd fa"></span><span class="ft">'+t+'</span></li>';}).join('');
 
   var procL={cataract:'Cataract surgery',lasik:'LASIK',rle:'Lens replacement (RLE)',icl:'ICL'};
-
   window._rd={comp:comp2,rc:rc,rl:rl,rs:rs2,nt:nt,dH:dH,fH:fH,anx:anx,dep:dep,perf:perf,sd:S.sd||'—',age:age,proc:procL[S.proc]||'—'};
+  window._pf=pfH;
 
   setProgress(5,4);
+
+  // Patient sees only a warm thank-you — no clinical data
   render(
-    '<div class="vtog">'+
+    '<div style="text-align:center;padding:2.5rem 1rem 2rem">'+
+    '<div style="width:64px;height:64px;border-radius:50%;background:var(--okb);display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem">'+
+    '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#3B6D11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>'+
+    '</div>'+
+    '<h1 style="font-size:22px;margin-bottom:12px">Thank you</h1>'+
+    '<p style="font-size:15px;color:var(--tm);line-height:1.7;max-width:420px;margin:0 auto 2rem">Your responses have been recorded. Your surgeon will review them before your consultation and use them to personalise the conversation with you. There is nothing else you need to do.</p>'+
+    '<p style="font-size:14px;color:var(--tl)">You can now hand the device back.</p>'+
+    '</div>'+
+    '<div style="margin-top:1rem;border-top:1px solid var(--bl);padding-top:1.5rem">'+
+    '<div style="font-size:12px;color:var(--tl);text-align:center;margin-bottom:1rem;letter-spacing:.05em;text-transform:uppercase;font-weight:600">Surgeon access</div>'+
+    '<div id="pin-area">'+
+    '<p style="font-size:14px;color:var(--tm);text-align:center;margin-bottom:1rem">Enter your PIN to view the clinical report</p>'+
+    '<div style="display:flex;gap:10px;justify-content:center;margin-bottom:1rem">'+
+    '<input id="pin1" type="password" inputmode="numeric" maxlength="1" style="width:52px;height:56px;text-align:center;font-size:24px;font-weight:700;border:1.5px solid var(--b);border-radius:var(--rs);background:var(--bg);color:var(--t);font-family:inherit" oninput="pinMove(this,\'pin2\')">'+
+    '<input id="pin2" type="password" inputmode="numeric" maxlength="1" style="width:52px;height:56px;text-align:center;font-size:24px;font-weight:700;border:1.5px solid var(--b);border-radius:var(--rs);background:var(--bg);color:var(--t);font-family:inherit" oninput="pinMove(this,\'pin3\')">'+
+    '<input id="pin3" type="password" inputmode="numeric" maxlength="1" style="width:52px;height:56px;text-align:center;font-size:24px;font-weight:700;border:1.5px solid var(--b);border-radius:var(--rs);background:var(--bg);color:var(--t);font-family:inherit" oninput="pinMove(this,\'pin4\')">'+
+    '<input id="pin4" type="password" inputmode="numeric" maxlength="1" style="width:52px;height:56px;text-align:center;font-size:24px;font-weight:700;border:1.5px solid var(--b);border-radius:var(--rs);background:var(--bg);color:var(--t);font-family:inherit" oninput="pinCheck()">'+
+    '</div>'+
+    '<div id="pin-err" style="font-size:13px;color:var(--bad);text-align:center;min-height:20px"></div>'+
+    '</div>'+
+    '</div>'
+  );
+}
+
+var PIN = '1234'; // Change this to your preferred PIN
+
+function pinMove(el, nextId) {
+  if (el.value.length === 1) {
+    var next = g(nextId);
+    if (next) next.focus();
+  }
+}
+
+function pinCheck() {
+  var entered = (g('pin1').value||'')+(g('pin2').value||'')+(g('pin3').value||'')+(g('pin4').value||'');
+  if (entered.length < 4) return;
+  if (entered === PIN) {
+    showReport();
+  } else {
+    g('pin-err').textContent = 'Incorrect PIN — please try again';
+    ['pin1','pin2','pin3','pin4'].forEach(function(id){ g(id).value=''; });
+    g('pin1').focus();
+  }
+}
+
+function showReport() {
+  var d = window._rd;
+  g('pin-area').innerHTML =
+    '<div class="vtog" style="margin-top:.5rem">'+
     '<button type="button" class="tbtn on" id="ts" onclick="sv(\'s\')">Surgeon view</button>'+
-    '<button type="button" class="tbtn" id="tp" onclick="sv(\'p\')">Patient summary</button>'+
+    '<button type="button" class="tbtn" id="tp" onclick="sv(\'p\')">Patient notes</button>'+
     '</div>'+
 
     '<div id="vs">'+
     '<div class="rcard"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">'+
-    '<div><div class="rtitle">Overall risk profile</div><div class="rbadge '+rc+'"><span class="rdot"></span>'+rl+'</div>'+
-    '<div style="font-size:14px;color:var(--tm);margin-top:4px">'+rs2+'</div></div>'+
-    '<div style="text-align:right"><span class="sbig">'+comp2+'</span><span class="sden"> / 100</span>'+
+    '<div><div class="rtitle">Overall risk profile</div><div class="rbadge '+d.rc+'"><span class="rdot"></span>'+d.rl+'</div>'+
+    '<div style="font-size:14px;color:var(--tm);margin-top:4px">'+d.rs+'</div></div>'+
+    '<div style="text-align:right"><span class="sbig">'+d.comp+'</span><span class="sden"> / 100</span>'+
     '<div style="font-size:12px;color:var(--tl);margin-top:2px">composite risk score</div></div>'+
     '</div></div>'+
-    '<div class="mgrid"><div class="mc"><div class="ml">Anxiety</div><div class="mv">'+anx+'/9</div></div>'+
-    '<div class="mc"><div class="ml">Depression</div><div class="mv">'+dep+'/9</div></div>'+
-    '<div class="mc"><div class="ml">Perfectionism</div><div class="mv">'+perf+'/15</div></div></div>'+
-    '<div class="rcard"><div class="rtitle">Domain breakdown</div>'+dH+'</div>'+
-    '<div class="rcard"><div class="rtitle">Clinical flags</div><ul class="fl">'+fH+'</ul></div>'+
-    '<div class="rcard"><div class="rtitle">Suggested approach</div><div class="nbox">'+nt+'</div></div>'+
-    '<div class="rcard"><div class="rtitle">Patient\'s definition of success</div><div class="sq">'+(S.sd||'Patient did not provide a written response.')+'</div></div>'+
+    '<div class="mgrid">'+
+    '<div class="mc"><div class="ml">Anxiety</div><div class="mv">'+d.anx+'/9</div></div>'+
+    '<div class="mc"><div class="ml">Depression</div><div class="mv">'+d.dep+'/9</div></div>'+
+    '<div class="mc"><div class="ml">Perfectionism</div><div class="mv">'+d.perf+'/15</div></div>'+
+    '</div>'+
+    '<div class="rcard"><div class="rtitle">Domain breakdown</div>'+d.dH+'</div>'+
+    '<div class="rcard"><div class="rtitle">Clinical flags</div><ul class="fl">'+d.fH+'</ul></div>'+
+    '<div class="rcard"><div class="rtitle">Suggested approach</div><div class="nbox">'+d.nt+'</div></div>'+
+    '<div class="rcard"><div class="rtitle">Patient\'s definition of success</div><div class="sq">'+(d.sd||'Not provided')+'</div></div>'+
     '</div>'+
 
     '<div id="vp" style="display:none">'+
-    '<div class="rcard"><div class="rtitle">What this means for your consultation</div>'+
-    '<div class="nbox">Your responses will help your surgeon personalise the conversation about your options. There are no wrong answers.</div></div>'+
-    '<div class="rcard"><div class="rtitle">Topics to explore with your surgeon</div><ul class="fl">'+pfH+'</ul></div>'+
+    '<div class="rcard"><div class="rtitle">Patient-facing talking points</div>'+
+    '<ul class="fl">'+window._pf+'</ul></div>'+
     '</div>'+
 
-    '<div class="navrow"><div class="nbtn nbtn-s" ontouchend="nev(event,\'resetForm\')" onclick="nev(event,\'resetForm\')">← Start over</div>'+
-    '<div class="nbtn nbtn-p" ontouchend="nev(event,\'openPrint\')" onclick="nev(event,\'openPrint\')">Print / Save PDF</div></div>'+
-    '<div class="pnote">Tap "Print / Save PDF" → new tab opens → use browser Print menu → Save as PDF</div>'
-  );
+    '<div class="navrow">'+
+    '<div class="nbtn nbtn-s" ontouchend="nev(event,\'resetForm\')" onclick="nev(event,\'resetForm\')">← New patient</div>'+
+    '<div class="nbtn nbtn-p" ontouchend="nev(event,\'openPrint\')" onclick="nev(event,\'openPrint\')">Print / Save PDF</div>'+
+    '</div>'+
+    '<div class="pnote">Tap "Print / Save PDF" → new tab opens → use browser Print menu → Save as PDF</div>';
 }
 
 function sv(v) {
